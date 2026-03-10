@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Customer Support — Live Demo</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface-2: #1a1a26;
+    --border: #2a2a3a;
+    --text: #e8e8ed;
+    --text-muted: #8888a0;
+    --accent: #6c5ce7;
+    --accent-glow: rgba(108, 92, 231, 0.15);
+    --user-bg: #6c5ce7;
+    --bot-bg: #1e1e2e;
+    --green: #00d68f;
+    --radius: 14px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Header */
+  .header {
+    width: 100%;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .header-dot {
+    width: 10px; height: 10px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(0, 214, 143, 0.5);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+  .header span {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  /* Banner */
+  .banner {
+    width: 100%;
+    max-width: 720px;
+    padding: 32px 24px 20px;
+    text-align: center;
+  }
+  .banner h2 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .banner p {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* Chat Container */
+  .chat-container {
+    width: 100%;
+    max-width: 720px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0 16px 16px;
+    min-height: 0;
+  }
+  .chat-window {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    max-height: 520px;
+  }
+
+  /* Messages Area */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scroll-behavior: smooth;
+  }
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* Message Bubbles */
+  .msg {
+    display: flex;
+    gap: 10px;
+    max-width: 85%;
+    animation: msg-in 0.3s ease-out;
+  }
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .msg.bot { align-self: flex-start; }
+
+  .msg-avatar {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .msg.bot .msg-avatar {
+    background: var(--accent-glow);
+    border: 1px solid rgba(108, 92, 231, 0.3);
+  }
+  .msg.user .msg-avatar {
+    background: rgba(0, 214, 143, 0.1);
+    border: 1px solid rgba(0, 214, 143, 0.3);
+  }
+
+  .msg-bubble {
+    padding: 12px 16px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.55;
+    letter-spacing: -0.1px;
+  }
+  .msg.bot .msg-bubble {
+    background: var(--bot-bg);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  .msg.user .msg-bubble {
+    background: var(--user-bg);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+
+  /* Typing Indicator */
+  .typing {
+    display: none;
+    align-self: flex-start;
+    gap: 10px;
+    max-width: 85%;
+  }
+  .typing.visible { display: flex; }
+  .typing-dots {
+    display: flex;
+    gap: 4px;
+    padding: 14px 18px;
+    background: var(--bot-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+  }
+  .typing-dots span {
+    width: 6px; height: 6px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  /* Input Area */
+  .input-area {
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    background: var(--surface-2);
+  }
+  .input-area input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-area input::placeholder { color: var(--text-muted); }
+  .input-area input:focus { border-color: var(--accent); }
+
+  .send-btn {
+    width: 44px; height: 44px;
+    background: var(--accent);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .send-btn:hover { background: #5b4bd6; transform: scale(1.05); }
+  .send-btn:active { transform: scale(0.95); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .send-btn svg { width: 18px; height: 18px; fill: #fff; }
+
+  /* Quick Actions */
+  .quick-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 12px 20px 4px;
+  }
+  .quick-btn {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 7px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .quick-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    background: var(--accent-glow);
+  }
+
+  /* Footer */
+  .footer {
+    padding: 16px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+
+  /* Mobile */
+  @media (max-width: 600px) {
+    .banner { padding: 24px 16px 16px; }
+    .banner h2 { font-size: 18px; }
+    .chat-container { padding: 0 8px 8px; }
+    .chat-window { max-height: 460px; }
+    .messages { padding: 14px; }
+    .msg { max-width: 92%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-dot"></div>
+  <h1>AI Support Agent</h1>
+  <span>Online</span>
+</div>
+
+<div class="banner">
+  <h2>Customer Support Chatbot Demo</h2>
+  <p>This AI agent handles returns, shipping, billing, account questions, and more. Try asking it anything a customer would.</p>
+</div>
+
+<div class="chat-container">
+  <div class="chat-window">
+    <div class="messages" id="messages">
+      <div class="msg bot">
+        <div class="msg-avatar">AI</div>
+        <div class="msg-bubble">Hi there! I'm your AI support agent. I can help with orders, returns, shipping, billing, or account questions. What can I help you with?</div>
+      </div>
+      <div class="quick-actions" id="quickActions">
+        <button class="quick-btn" onclick="sendQuick('Where is my order?')">Where is my order?</button>
+        <button class="quick-btn" onclick="sendQuick('How do I return an item?')">Return an item</button>
+        <button class="quick-btn" onclick="sendQuick('I need to update my billing info')">Update billing</button>
+        <button class="quick-btn" onclick="sendQuick('Can I cancel my subscription?')">Cancel subscription</button>
+      </div>
+    </div>
+
+    <div class="typing" id="typing">
+      <div class="msg-avatar" style="background:var(--accent-glow);border:1px solid rgba(108,92,231,0.3)">AI</div>
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>
+
+    <div class="input-area">
+      <input type="text" id="userInput" placeholder="Type your question..." autocomplete="off" />
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Built by <a href="#">Mirai AI LLC</a> — AI-powered customer support
+</div>
+
+<script>
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+const typingEl = document.getElementById('typing');
+const quickEl = document.getElementById('quickActions');
+let sending = false;
+
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !sending) sendMessage();
+});
+
+function sendQuick(text) {
+  inputEl.value = text;
+  sendMessage();
+}
+
+function addMessage(text, role) {
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const avatar = role === 'bot' ? 'AI' : 'You';
+  div.innerHTML = `
+    <div class="msg-avatar">${avatar}</div>
+    <div class="msg-bubble">${escapeHtml(text)}</div>
+  `;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function escapeHtml(text) {
+  const d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}
+
+async function sendMessage() {
+  const text = inputEl.value.trim();
+  if (!text || sending) return;
+
+  // Hide quick actions after first message
+  if (quickEl) quickEl.style.display = 'none';
+
+  sending = true;
+  sendBtn.disabled = true;
+  inputEl.value = '';
+  addMessage(text, 'user');
+
+  typingEl.classList.add('visible');
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text })
+    });
+    const data = await res.json();
+    typingEl.classList.remove('visible');
+
+    if (data.reply) {
+      addMessage(data.reply, 'bot');
+    } else {
+      addMessage("Sorry, I'm having trouble right now. A human agent will follow up shortly.", 'bot');
+    }
+  } catch (err) {
+    typingEl.classList.remove('visible');
+    addMessage("Connection issue — please try again in a moment.", 'bot');
+  }
+
+  sending = false;
+  sendBtn.disabled = false;
+  inputEl.focus();
+}
+</script>
+
+</body>
+</html>
