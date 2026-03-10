@@ -47,12 +47,16 @@ RULES:
 
     const data = await response.json();
 
+    if (!response.ok) {
+      return res.status(500).json({ error: `OpenAI error: ${data.error?.message || JSON.stringify(data)}` });
+    }
+
     if (data.choices && data.choices[0]) {
       return res.status(200).json({ reply: data.choices[0].message.content });
     }
 
-    return res.status(500).json({ error: 'No response from AI' });
+    return res.status(500).json({ error: 'No response from AI', debug: data });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to process request' });
+    return res.status(500).json({ error: `Exception: ${err.message}` });
   }
 }
